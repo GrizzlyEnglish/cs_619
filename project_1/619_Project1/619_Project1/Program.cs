@@ -25,10 +25,14 @@ namespace _619_Project1
             double bs_time_ms = 0;
 
             int runs = 15;
-            int length = 15;
+            int length = 0;
+
+            Console.WriteLine(String.Format("|{0,5}|{1,5}|{2,5}|", "Length of Dataset", "Sequential", "Binary"));
 
             for (int i = 0; i < runs; i++)
             {
+                length = i * 1000;
+
                 // Generate the arrays
                 int[] seq_array = new int[length];
                 int[] bs_array = new int[length];
@@ -60,11 +64,9 @@ namespace _619_Project1
                         throw new Exception("Arrays do not match");
                     }
                 }
-            }
 
-            Console.WriteLine($"Ran {runs} times with a randomly filled array with length {length}");
-            Console.WriteLine($"Insertion sort with sequential search took {seq_time_ms / runs}ms on average");
-            Console.WriteLine($"Insertion sort with binary search took {bs_time_ms / runs}ms on average");
+                Console.WriteLine(String.Format("|{0,5}|{1,5}|{2,5}|", length, seq_time_ms.ToString() + "ms", bs_time_ms.ToString() + "ms"));
+            }
         }
 
         /// <summary>
