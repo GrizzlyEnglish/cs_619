@@ -1,0 +1,12 @@
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\bin\Debug\netcoreapp3.1\RodCutting.exe
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\bin\Debug\netcoreapp3.1\RodCutting.deps.json
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\bin\Debug\netcoreapp3.1\RodCutting.runtimeconfig.json
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\bin\Debug\netcoreapp3.1\RodCutting.runtimeconfig.dev.json
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\bin\Debug\netcoreapp3.1\RodCutting.dll
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\bin\Debug\netcoreapp3.1\RodCutting.pdb
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\obj\Debug\netcoreapp3.1\RodCutting.AssemblyInfoInputs.cache
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\obj\Debug\netcoreapp3.1\RodCutting.AssemblyInfo.cs
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\obj\Debug\netcoreapp3.1\RodCutting.csproj.CoreCompileInputs.cache
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\obj\Debug\netcoreapp3.1\RodCutting.dll
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\obj\Debug\netcoreapp3.1\RodCutting.pdb
+C:\Users\formy\Desktop\masters\619\RodCutting\RodCutting\obj\Debug\netcoreapp3.1\RodCutting.genruntimeconfig.cache

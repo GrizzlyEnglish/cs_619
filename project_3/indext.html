@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        p {
+            text-align: center;
+            overflow: overlay;
+            position: relative;
+        }
+
+        body {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            background-color: rgb(248, 248, 248)
+        }
+
+        #toolbox {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            margin-bottom: 0.5em;
+            margin-left: 1em;
+            border: 2px solid #EEEEEE;
+            border-radius: 5px;
+            padding: 1em;
+            z-index: 5;
+        }
+
+        #toolbox input {
+            width: 30px;
+            opacity: 0.4;
+        }
+
+        #toolbox input:hover {
+            opacity: 1;
+            cursor: pointer;
+        }
+
+        #hidden-file-upload {
+            display: none;
+        }
+
+        #download-input {
+            margin: 0 0.5em;
+        }
+
+        .conceptG text {
+            pointer-events: none;
+        }
+
+        marker {
+            fill: #333;
+        }
+
+        .opacity {
+            opacity: .5;
+        }
+
+        g.conceptG circle {
+            fill: #F6FBFF;
+            stroke: #333;
+            stroke-width: 2px;
+        }
+
+        g.conceptG:hover circle {
+            fill: rgb(200, 238, 241);
+        }
+
+        g.selected circle {
+            fill: rgb(250, 232, 255);
+        }
+
+        g.selected:hover circle {
+            fill: rgb(250, 232, 255);
+        }
+
+        path.link {
+            fill: none;
+            stroke: #333;
+            stroke-width: 6px;
+            cursor: default;
+        }
+
+        g.connect-node circle {
+            fill: #BEFFFF;
+        }
+
+        path.link.hidden {
+            stroke-width: 0;
+        }
+
+        #bfs {
+            position: absolute;
+            top: 100px;
+            left: 50px;
+        }
+
+        #dfs {
+            position: absolute;
+            top: 150px;
+            left: 50px;
+        }
+
+        #label {
+            position: absolute;
+            top: 25px;
+            left: 50px;
+        }
+
+        #source {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+        }
+
+        #reset {
+            position: absolute;
+            top: 200px;
+            left: 50px;
+        }
+
+        #graphLabel {
+            position: absolute;
+            top: 225px;
+            left: 50px;
+        }
+
+        #treeEdges {
+            position: absolute;
+            top: 300px;
+            left: 50px;
+        }
+
+        #backEdges {
+            position: absolute;
+            top: 300px;
+            left: 150px;
+        }
+
+        #crossEdges {
+            position: absolute;
+            top: 600px;
+            left: 50px;
+        }
+
+        #forwardEdges {
+            position: absolute;
+            top: 600px;
+            left: 150px;
+        }
+
+        #topologicalSort {
+            position: absolute;
+            top: 800px;
+            left: 50px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <label id="label">Source Node</label>
+    <select id="source">
+        <option>A</option>
+        <option>B</option>
+        <option>C</option>
+        <option>D</option>
+        <option>E</option>
+        <option>F</option>
+        <option>G</option>
+        <option>H</option>
+    </select>
+    <button id="bfs">BFS</button>
+    <button id="dfs">DFS</button>
+    <button id="reset">Reset</button>
+    <h1 id="graphLabel"></h1>
+    <div id="treeEdges">
+        <label>Tree Edges</label>
+        <ul id="treeEdgesList">
+        </ul>
+    </div>
+    <div id="backEdges">
+        <label>Back Edges</label>
+        <ul id="backEdgesList">
+        </ul>
+    </div>
+    <div id="forwardEdges">
+        <label>Forward Edges</label>
+        <ul id="forwardEdgesList">
+        </ul>
+    </div>
+    <div id="crossEdges">
+        <label>Cross Edges</label>
+        <ul id="crossEdgesList">
+        </ul>
+    </div>
+    <div id="topologicalSort">
+        <label>Topological Sort</label>
+        <p id="topologicalSortLabel"></p>
+    </div>
+    <script>
+        document.onload = (function (d3, saveAs, Blob, undefined) {
+            "use strict";
+
+            // define graphcreator object
+            var GraphCreator = function (svg, nodes, edges) {
+                var thisGraph = this;
+                thisGraph.idct = 0;
+
+                thisGraph.nodes = nodes || [];
+                thisGraph.edges = edges || [];
+
+                thisGraph.state = {
+                    selectedNode: null,
+                    selectedEdge: null,
+                    mouseDownNode: null,
+                    mouseDownLink: null,
+                    justDragged: false,
+                    justScaleTransGraph: false,
+                    lastKeyDown: -1,
+                    shiftNodeDrag: false,
+                    selectedText: null
+                };
+
+                // define arrow markers for graph links
+                var defs = svg.append('svg:defs');
+                defs.append('svg:marker')
+                    .attr('id', 'end-arrow')
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', "32")
+                    .attr('markerWidth', 3.5)
+                    .attr('markerHeight', 3.5)
+                    .attr('orient', 'auto')
+                    .append('svg:path')
+                    .attr('d', 'M0,-5L10,0L0,5');
+
+                // define arrow markers for leading arrow
+                defs.append('svg:marker')
+                    .attr('id', 'mark-end-arrow')
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 7)
+                    .attr('markerWidth', 3.5)
+                    .attr('markerHeight', 3.5)
+                    .attr('orient', 'auto')
+                    .append('svg:path')
+                    .attr('d', 'M0,-5L10,0L0,5');
+
+                thisGraph.svg = svg;
+                thisGraph.svgG = svg.append("g")
+                    .classed(thisGraph.consts.graphClass, true);
+                var svgG = thisGraph.svgG;
+
+                // displayed when dragging between nodes
+                thisGraph.dragLine = svgG.append('svg:path')
+                    .attr('class', 'link dragline hidden')
+                    .attr('d', 'M0,0L0,0')
+                    .style('marker-end', 'url(#mark-end-arrow)');
+
+                // svg nodes and edges 
+                thisGraph.paths = svgG.append("g").selectAll("g");
+                thisGraph.circles = svgG.append("g").selectAll("g");
+
+                thisGraph.drag = d3.behavior.drag()
+                    .origin(function (d) {
+                        return { x: d.x, y: d.y };
+                    })
+                    .on("drag", function (args) {
+                        thisGraph.state.justDragged = true;
+                        thisGraph.dragmove.call(thisGraph, args);
+                    })
+                    .on("dragend", function () {
+                        // todo check if edge-mode is selected
+                    });
+
+                // listen for dragging
+                var dragSvg = d3.behavior.zoom()
+                    .on("zoom", function () {
+                        if (d3.event.sourceEvent.shiftKey) {
+                            // TODO  the internal d3 state is still changing
+                            return false;
+                        } else {
+                            thisGraph.zoomed.call(thisGraph);
+                        }
+                        return true;
+                    })
+                    .on("zoomstart", function () {
+                        var ael = d3.select("#" + thisGraph.consts.activeEditId).node();
+                        if (ael) {
+                            ael.blur();
+                        }
+                        if (!d3.event.sourceEvent.shiftKey) d3.select('body').style("cursor", "move");
+                    })
+                    .on("zoomend", function () {
+                        d3.select('body').style("cursor", "auto");
+                    });
+
+                svg.call(dragSvg).on("dblclick.zoom", null);
+
+                // listen for resize
+                window.onresize = function () { thisGraph.updateWindow(svg); };
+            };
+
+            GraphCreator.prototype.setIdCt = function (idct) {
+                this.idct = idct;
+            };
+
+            GraphCreator.prototype.consts = {
+                selectedClass: "selected",
+                connectClass: "connect-node",
+                circleGClass: "conceptG",
+                graphClass: "graph",
+                activeEditId: "active-editing",
+                BACKSPACE_KEY: 8,
+                DELETE_KEY: 46,
+                ENTER_KEY: 13,
+                nodeRadius: 50
+            };
+
+            /* PROTOTYPE FUNCTIONS */
+
+            GraphCreator.prototype.dragmove = function (d) {
+                var thisGraph = this;
+                if (thisGraph.state.shiftNodeDrag) {
+                    thisGraph.dragLine.attr('d', 'M' + d.x + ',' + d.y + 'L' + d3.mouse(thisGraph.svgG.node())[0] + ',' + d3.mouse(this.svgG.node())[1]);
+                } else {
+                    d.x += d3.event.dx;
+                    d.y += d3.event.dy;
+                    thisGraph.updateGraph();
+                }
+            };
+
+            /* select all text in element: taken from http://stackoverflow.com/questions/6139107/programatically-select-text-in-a-contenteditable-html-element */
+            GraphCreator.prototype.selectElementContents = function (el) {
+                var range = document.createRange();
+                range.selectNodeContents(el);
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            };
+
+
+            /* insert svg line breaks: taken from http://stackoverflow.com/questions/13241475/how-do-i-include-newlines-in-labels-in-d3-charts */
+            GraphCreator.prototype.insertTitleLinebreaks = function (gEl, title) {
+                var words = title.split(/\s+/g),
+                    nwords = words.length;
+                var el = gEl.append("text")
+                    .attr("text-anchor", "middle")
+                    .attr("dy", "-" + (nwords - 1) * 7.5);
+
+                for (var i = 0; i < words.length; i++) {
+                    var tspan = el.append('tspan').text(words[i]);
+                    if (i > 0)
+                        tspan.attr('x', 0).attr('dy', '15');
+                }
+            };
+
+
+            // remove edges associated with a node
+            GraphCreator.prototype.spliceLinksForNode = function (node) {
+                var thisGraph = this,
+                    toSplice = thisGraph.edges.filter(function (l) {
+                        return (l.source === node || l.target === node);
+                    });
+                toSplice.map(function (l) {
+                    thisGraph.edges.splice(thisGraph.edges.indexOf(l), 1);
+                });
+            };
+
+            GraphCreator.prototype.replaceSelectEdge = function (d3Path, edgeData) {
+                var thisGraph = this;
+                d3Path.classed(thisGraph.consts.selectedClass, true);
+                if (thisGraph.state.selectedEdge) {
+                    thisGraph.removeSelectFromEdge();
+                }
+                thisGraph.state.selectedEdge = edgeData;
+            };
+
+            GraphCreator.prototype.replaceSelectNode = function (d3Node, nodeData) {
+                var thisGraph = this;
+                d3Node.classed(this.consts.selectedClass, true);
+                if (thisGraph.state.selectedNode) {
+                    thisGraph.removeSelectFromNode();
+                }
+                thisGraph.state.selectedNode = nodeData;
+            };
+
+            GraphCreator.prototype.removeSelectFromNode = function () {
+                var thisGraph = this;
+                thisGraph.circles.filter(function (cd) {
+                    return cd.id === thisGraph.state.selectedNode.id;
+                }).classed(thisGraph.consts.selectedClass, false);
+                thisGraph.state.selectedNode = null;
+            };
+
+            GraphCreator.prototype.removeSelectFromEdge = function () {
+                var thisGraph = this;
+                thisGraph.paths.filter(function (cd) {
+                    return cd === thisGraph.state.selectedEdge;
+                }).classed(thisGraph.consts.selectedClass, false);
+                thisGraph.state.selectedEdge = null;
+            };
+
+            GraphCreator.prototype.pathMouseDown = function (d3path, d) {
+                var thisGraph = this,
+                    state = thisGraph.state;
+                d3.event.stopPropagation();
+                state.mouseDownLink = d;
+
+                if (state.selectedNode) {
+                    thisGraph.removeSelectFromNode();
+                }
+
+                var prevEdge = state.selectedEdge;
+                if (!prevEdge || prevEdge !== d) {
+                    thisGraph.replaceSelectEdge(d3path, d);
+                } else {
+                    thisGraph.removeSelectFromEdge();
+                }
+            };
+
+            // mousedown on node
+            GraphCreator.prototype.circleMouseDown = function (d3node, d) {
+                var thisGraph = this,
+                    state = thisGraph.state;
+                d3.event.stopPropagation();
+                state.mouseDownNode = d;
+                if (d3.event.shiftKey) {
+                    state.shiftNodeDrag = d3.event.shiftKey;
+                    // reposition dragged directed edge
+                    thisGraph.dragLine.classed('hidden', false)
+                        .attr('d', 'M' + d.x + ',' + d.y + 'L' + d.x + ',' + d.y);
+                    return;
+                }
+            };
+
+            /* place editable text on node in place of svg text */
+            GraphCreator.prototype.changeTextOfNode = function (d3node, d) {
+                var thisGraph = this,
+                    consts = thisGraph.consts,
+                    htmlEl = d3node.node();
+                d3node.selectAll("text").remove();
+                var nodeBCR = htmlEl.getBoundingClientRect(),
+                    curScale = nodeBCR.width / consts.nodeRadius,
+                    placePad = 5 * curScale,
+                    useHW = curScale > 1 ? nodeBCR.width * 0.71 : consts.nodeRadius * 1.42;
+                // replace with editableconent text
+                var d3txt = thisGraph.svg.selectAll("foreignObject")
+                    .data([d])
+                    .enter()
+                    .append("foreignObject")
+                    .attr("x", nodeBCR.left + placePad)
+                    .attr("y", nodeBCR.top + placePad)
+                    .attr("height", 2 * useHW)
+                    .attr("width", useHW)
+                    .append("xhtml:p")
+                    .attr("id", consts.activeEditId)
+                    .attr("contentEditable", "true")
+                    .text(d.title)
+                    .on("mousedown", function (d) {
+                        d3.event.stopPropagation();
+                    })
+                    .on("keydown", function (d) {
+                        d3.event.stopPropagation();
+                        if (d3.event.keyCode == consts.ENTER_KEY && !d3.event.shiftKey) {
+                            this.blur();
+                        }
+                    })
+                    .on("blur", function (d) {
+                        d.title = this.textContent;
+                        thisGraph.insertTitleLinebreaks(d3node, d.title);
+                        d3.select(this.parentElement).remove();
+                    });
+                return d3txt;
+            };
+
+            // call to propagate changes to graph
+            GraphCreator.prototype.updateGraph = function () {
+
+                var thisGraph = this,
+                    consts = thisGraph.consts,
+                    state = thisGraph.state;
+
+                thisGraph.paths = thisGraph.paths.data(thisGraph.edges, function (d) {
+                    return String(d.source.id) + "+" + String(d.target.id);
+                });
+                var paths = thisGraph.paths;
+                // update existing paths
+                paths.style('marker-end', 'url(#end-arrow)')
+                    .classed("opacity", function (d) { return d.hidden; })
+                    .attr("d", function (d) {
+                        return "M" + d.source.x + "," + d.source.y + "L" + d.target.x + "," + d.target.y;
+                    });
+
+                // add new paths
+                paths.enter()
+                    .append("path")
+                    .style('marker-end', 'url(#end-arrow)')
+                    .classed("link", true)
+                    .classed("opacity", function (d) { return d.hidden; })
+                    .attr("d", function (d) {
+                        return "M" + d.source.x + "," + d.source.y + "L" + d.target.x + "," + d.target.y;
+                    });
+
+                // remove old links
+                paths.exit().remove();
+
+                // update existing nodes
+                thisGraph.circles = thisGraph.circles.data(nodes, function (d) { return d.id; });
+                thisGraph.circles
+                    .classed("opacity", function (d) { return d.hidden; })
+                    .classed("selected", function (d) { return d.selected; })
+                    .attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
+
+                // add new nodes
+                var newGs = thisGraph.circles.enter()
+                    .append("g");
+
+                newGs
+                    .classed(consts.circleGClass, true)
+                    .classed("opacity", function (d) { return d.hidden; })
+                    .classed("selected", function (d) { return d.selected; })
+                    .attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; })
+                    .on("mouseover", function (d) {
+                        if (state.shiftNodeDrag) {
+                            d3.select(this).classed(consts.connectClass, true);
+                        }
+                    })
+                    .call(thisGraph.drag);
+
+                newGs.append("circle")
+                    .attr("r", String(consts.nodeRadius));
+
+                newGs.each(function (d) {
+                    thisGraph.insertTitleLinebreaks(d3.select(this), d.title);
+                });
+
+                // remove old nodes
+                thisGraph.circles.exit().remove();
+            };
+
+            GraphCreator.prototype.zoomed = function () {
+                this.state.justScaleTransGraph = true;
+                d3.select("." + this.consts.graphClass)
+                    .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")");
+            };
+
+            GraphCreator.prototype.updateWindow = function (svg) {
+                var docEl = document.documentElement,
+                    bodyEl = document.getElementsByTagName('body')[0];
+                var x = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth;
+                var y = window.innerHeight || docEl.clientHeight || bodyEl.clientHeight;
+                svg.attr("width", x).attr("height", y);
+            };
+
+            clearEdgeInformation();
+
+            var docEl = document.documentElement,
+                bodyEl = document.getElementsByTagName('body')[0];
+
+            var width = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth,
+                height = window.innerHeight || docEl.clientHeight || bodyEl.clientHeight;
+
+            var xLoc = width / 2 - 25,
+                yLoc = 200;
+
+            // initial node data
+            var nodes = [
+                {
+                    title: "A",
+                    hidden: false,
+                    selected: false,
+                    visited: false,
+                    pie: null,
+                    d: 0,
+                    f: 0,
+                    id: 0,
+                    x: 1364,
+                    y: 411
+                },
+                {
+                    title: "B",
+                    hidden: false,
+                    selected: false,
+                    visited: false,
+                    pie: null,
+                    d: 0,
+                    f: 0,
+                    id: 1,
+                    x: 1147,
+                    y: 175
+                },
+                {
+                    title: "C",
+                    hidden: false,
+                    selected: false,
+                    visited: false,
+                    pie: null,
+                    d: 0,
+                    f: 0,
+                    id: 2,
+                    x: 1019,
+                    y: 311
+                },
+                {
+                    title: "D",
+                    selected: false,
+                    hidden: false,
+                    visited: false,
+                    pie: null,
+                    d: 0,
+                    f: 0,
+                    id: 3,
+                    x: 788,
+                    y: 160
+                },
+                {
+                    title: "E",
+                    hidden: false,
+                    selected: false,
+                    visited: false,
+                    pie: null,
+                    d: 0,
+                    f: 0,
+                    id: 4,
+                    x: 721,
+                    y: 410
+                },
+                {
+                    title: "F",
+                    hidden: false,
+                    selected: false,
+                    visited: false,
+                    pie: null,
+                    d: 0,
+                    f: 0,
+                    id: 5,
+                    x: 951,
+                    y: 658
+                },
+                {
+                    title: "G",
+                    hidden: false,
+                    selected: false,
+                    visited: false,
+                    pie: null,
+                    d: 0,
+                    f: 0,
+                    id: 6,
+                    x: 643,
+                    y: 788
+                },
+                {
+                    title: "H",
+                    hidden: false,
+                    selected: false,
+                    visited: false,
+                    pie: null,
+                    d: 0,
+                    f: 0,
+                    id: 7,
+                    x: 526,
+                    y: 512
+                }
+            ];
+
+            var edges = [
+                { source: nodes[0], target: nodes[1], hidden: false },
+                { source: nodes[0], target: nodes[2], hidden: false },
+
+                { source: nodes[1], target: nodes[0], hidden: false },
+                { source: nodes[1], target: nodes[2], hidden: false },
+
+                { source: nodes[2], target: nodes[3], hidden: false },
+                { source: nodes[2], target: nodes[5], hidden: false },
+
+                { source: nodes[3], target: nodes[4], hidden: false },
+                { source: nodes[3], target: nodes[5], hidden: false },
+
+                { source: nodes[4], target: nodes[5], hidden: false },
+                { source: nodes[4], target: nodes[6], hidden: false },
+
+                { source: nodes[5], target: nodes[7], hidden: false },
+
+                { source: nodes[6], target: nodes[7], hidden: false },
+
+                { source: nodes[7], target: nodes[4], hidden: false },
+            ];
+
+            /** MAIN SVG **/
+            var svg = d3.select("body").append("svg")
+                .attr("width", width)
+                .attr("height", height);
+            var graph = new GraphCreator(svg, nodes, edges);
+            graph.setIdCt(2);
+            graph.updateGraph();
+
+            var interval;
+
+            function resetNodes() {
+                nodes.forEach(n => {
+                    n.hidden = false;
+                    n.visited = false;
+                    n.selected = false;
+                    n.pie = null;
+                    n.d = 0;
+                });
+                edges.forEach(e => {
+                    e.hidden = false;
+                    e.visited = false;
+                });
+                graph.updateGraph();
+            }
+
+            function topologicalSortUtil(copiedNodes, node, stack)
+            {
+                node.visited = true;
+
+                // Find the adj nodes
+                var ogAdj = edges.filter(e => e.source == node).map(e => e.target.id);
+
+                copiedNodes.filter(n => !n.visited && ogAdj.includes(n.id)).forEach(n => {
+                    topologicalSortUtil(copiedNodes, n, stack);
+                });
+
+                // Add it to the stack
+                stack.push(node);
+            }
+
+            function topologicalSort() {
+                if (document.getElementById("backEdgesList").innerHTML !== "") {
+
+                } else {
+                    let copiedNodes = nodes.map(n => Object.assign(n));
+
+                    copiedNodes.forEach(n => {
+                        n.hidden = false;
+                        n.visited = false;
+                        n.selected = false;
+                        n.pie = null;
+                        n.d = 0;
+                    });
+
+                    var stack = [];
+
+                    copiedNodes.forEach(n => {
+                        if (n.visited === false) {
+                            topologicalSortUtil(copiedNodes, n, stack);
+                        }
+                    });
+
+                    let elem = document.getElementById("topologicalSortLabel");
+
+                    for(let i = stack.length - 1; i >= 0; i--) {
+                        elem.innerHTML += stack[i].title + ',';
+                    }
+                }
+            }
+
+            document.getElementById("dfs").addEventListener('click', function () {
+                document.getElementById("graphLabel").innerHTML = "Depth First Search";
+
+                const source = document.getElementById("source").value;
+
+                resetNodes();
+                clearEdgeInformation();
+
+                document.getElementById("treeEdges").style.visibility = "initial";
+                document.getElementById("crossEdges").style.visibility = "initial";
+                document.getElementById("forwardEdges").style.visibility = "initial";
+                document.getElementById("backEdges").style.visibility = "initial";
+                document.getElementById("topologicalSort").style.visibility = "initial";
+
+                // Get the source
+                var sourceNodeIndex = nodes.findIndex(n => n.title === source);
+                var sourceNode = nodes[sourceNodeIndex];
+
+                // mark all nodes and edges as hidden
+                nodes.forEach(n => n.hidden = true);
+                edges.forEach(e => e.hidden = true);
+
+                sourceNode.selected = true;
+                sourceNode.hidden = false;
+                sourceNode.visited = true;
+
+                var Q = [sourceNode];
+                var time = 0;
+
+                interval = setInterval(function () {
+                    time += 1;
+                    var node = Q.splice(Q.length - 1, 1)[0];
+
+                    if (node === undefined) {
+                        if (nodes.some(n => !n.visited)) {
+                            Q.push(nodes.find(n => !n.visited));
+                            return;
+                        }
+
+                        clearInterval(interval);
+                        topologicalSort();
+                        return;
+                    }
+
+                    node.visited = true;
+
+                    // get adjacencies
+                    var nodeEdges = edges.filter(e => e.source == node);
+
+                    nodeEdges.forEach(edgeBetween => {
+                        if (edgeBetween.source.d !== null && edgeBetween.source.f === null) {
+                            addEdgeListItem("backEdgesList", edgeBetween.source.title, edgeBetween.target.title);
+                        }
+                        else if (edgeBetween.source.d < edgeBetween.target.d) {
+                            addEdgeListItem("forwardEdgesList", edgeBetween.source.title, edgeBetween.target.title);
+                        }
+                        else if (edgeBetween.source.d > edgeBetween.target.d) {
+                            addEdgeListItem("crossEdgesList", edgeBetween.source.title, edgeBetween.target.title);
+                        }
+                    });
+
+                    var targetNodes = nodeEdges.map(e => e.target);
+                    nodes.filter(n => targetNodes.includes(n)).forEach(n => {
+                        if (!n.visited && !n.selected) {
+                            let queued = Object.assign(n);
+                            queued.pie = node;
+                            Q.push(queued);
+                        }
+                    });
+
+                    node.d = time;
+                    if (node.pie != null) {
+                        node.pie.f = time + 1;
+                    }
+
+                    if (node.pie !== null) {
+                        // mark the edge
+                        console.log(node);
+                        var edgeBetween = edges.find(e => e.source === node.pie && e.target === node);
+                        if (node.pie.selected) {
+                            edgeBetween.hidden = false;
+                            node.selected = true;
+                            node.hidden = false;
+                            addEdgeListItem("treeEdgesList", edgeBetween.source.title, edgeBetween.target.title);
+                        }
+                    }
+
+                    graph.updateGraph();
+                }, 1000);
+            });
+
+            function clearEdgeInformation() {
+                document.getElementById("treeEdges").style.visibility = "hidden";
+                document.getElementById("crossEdges").style.visibility = "hidden";
+                document.getElementById("forwardEdges").style.visibility = "hidden";
+                document.getElementById("backEdges").style.visibility = "hidden";
+                document.getElementById("topologicalSort").style.visibility = "hidden";
+
+                document.getElementById("treeEdgesList").innerHTML = "";
+                document.getElementById("crossEdgesList").innerHTML = "";
+                document.getElementById("forwardEdgesList").innerHTML = "";
+                document.getElementById("backEdgesList").innerHTML = "";
+                document.getElementById("topologicalSortLabel").innerHTML = "";
+            }
+
+            function addEdgeListItem(id, source, target) {
+                document.getElementById(id).innerHTML += `<li>${source} -> ${target}</li>`;
+            }
+
+            document.getElementById("bfs").addEventListener('click', function () {
+                document.getElementById("graphLabel").innerHTML = "Breadth First Search";
+
+                const source = document.getElementById("source").value;
+
+                resetNodes();
+
+                // Get the source
+                var sourceNodeIndex = nodes.findIndex(n => n.title === source);
+                var sourceNode = nodes[sourceNodeIndex];
+
+                // mark all nodes and edges as hidden
+                nodes.forEach(n => n.hidden = true);
+                edges.forEach(e => e.hidden = true);
+
+                sourceNode.selected = true;
+                sourceNode.hidden = false;
+                sourceNode.visited = true;
+
+                var Q = [sourceNode];
+
+                interval = setInterval(function () {
+
+                    var node = Q.splice(0, 1)[0];
+
+                    if (node === undefined) {
+                        clearInterval(interval);
+
+                        return;
+                    }
+
+                    // get adjacencies
+                    var nodeEdges = edges.filter(e => e.source == node).map(e => e.target);
+                    nodes.filter(n => nodeEdges.includes(n)).forEach(n => {
+                        if (!n.visited && !Q.includes(n)) {
+                            n.visited = true;
+                            n.pie = node;
+                            n.d = node.d + 1;
+                            Q.push(n);
+                        }
+                    });
+
+                    node.selected = true;
+                    node.hidden = false;
+
+                    if (node.pie !== null) {
+                        // mark the edge
+                        console.log(node);
+                        var edgeBetween = edges.find(e => e.source === node.pie && e.target === node);
+                        edgeBetween.hidden = false;
+                    }
+
+                    graph.updateGraph();
+                }, 1000);
+            });
+
+            document.getElementById("reset").addEventListener('click', function () {
+                document.getElementById("graphLabel").innerHTML = "";
+                clearEdgeInformation();
+                clearInterval(interval);
+                setTimeout(resetNodes, 1000);
+            });
+
+        })(window.d3, window.saveAs, window.Blob);
+    </script>
+</body>
+
+</html>

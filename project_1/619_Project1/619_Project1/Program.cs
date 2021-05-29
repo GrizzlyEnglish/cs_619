@@ -29,7 +29,7 @@ namespace _619_Project1
 
             Console.WriteLine(String.Format("|{0,5}|{1,5}|{2,5}|", "Length of Dataset", "Sequential", "Binary"));
 
-            for (int i = 0; i < runs; i++)
+            for (int i = 1; i < runs + 1; i++)
             {
                 length = i * 1000;
 

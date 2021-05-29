@@ -1,0 +1,13 @@
+C:\Users\formy\Desktop\masters\619\project_2\project_2\bin\Debug\netcoreapp3.1\project_2.exe
+C:\Users\formy\Desktop\masters\619\project_2\project_2\bin\Debug\netcoreapp3.1\project_2.deps.json
+C:\Users\formy\Desktop\masters\619\project_2\project_2\bin\Debug\netcoreapp3.1\project_2.runtimeconfig.json
+C:\Users\formy\Desktop\masters\619\project_2\project_2\bin\Debug\netcoreapp3.1\project_2.runtimeconfig.dev.json
+C:\Users\formy\Desktop\masters\619\project_2\project_2\bin\Debug\netcoreapp3.1\project_2.dll
+C:\Users\formy\Desktop\masters\619\project_2\project_2\bin\Debug\netcoreapp3.1\project_2.pdb
+C:\Users\formy\Desktop\masters\619\project_2\project_2\obj\Debug\netcoreapp3.1\project_2.csprojAssemblyReference.cache
+C:\Users\formy\Desktop\masters\619\project_2\project_2\obj\Debug\netcoreapp3.1\project_2.AssemblyInfoInputs.cache
+C:\Users\formy\Desktop\masters\619\project_2\project_2\obj\Debug\netcoreapp3.1\project_2.AssemblyInfo.cs
+C:\Users\formy\Desktop\masters\619\project_2\project_2\obj\Debug\netcoreapp3.1\project_2.csproj.CoreCompileInputs.cache
+C:\Users\formy\Desktop\masters\619\project_2\project_2\obj\Debug\netcoreapp3.1\project_2.dll
+C:\Users\formy\Desktop\masters\619\project_2\project_2\obj\Debug\netcoreapp3.1\project_2.pdb
+C:\Users\formy\Desktop\masters\619\project_2\project_2\obj\Debug\netcoreapp3.1\project_2.genruntimeconfig.cache
